@@ -53,14 +53,36 @@ pip install -r requirements.txt
 ### 2. 安装 Ollama（本地化翻译必备）
 
     从Ollama 官网下载并安装对应系统版本
-    拉取 Qwen2.5 模型（推荐 14B 量化版）：
-
+    拉取 适合的模型（推荐gemma3:27b）：
+      
 ```bash
 
 
-ollama pull qwen2.5:14b-int4
+ollama pull gemma3:27b
+#运行ollama
+ollama serve
+
 ```
 ### 📖 使用指南
+如需要修改为gemma3:27b以外的模型模型
+需要修改setting.py以及translator.py中参数
+# config/setting.py：
+```bash
+ # Ollama配置（核心：HTTP协议，无SSL）
+    LOCAL_API_KEY = os.getenv("LOCAL_API_KEY", "ollama-no-key")  # 任意值即可
+    LOCAL_API_BASE = os.getenv("LOCAL_API_BASE", "http://localhost:11434/v1")  # 必须是HTTP
+    LOCAL_MODEL = os.getenv("LOCAL_MODEL", "gemma3:27b")
+    
+```
+# core/translator.py
+```bash
+payload = {
+                "model": getattr(config, "LOCAL_MODEL", "gemma3:27b"),
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "max_tokens": 500
+            }
+```
 方式 1：图形界面（GUI，推荐新手）
 ```bash
 
@@ -104,3 +126,4 @@ python main.py --video path/to/video.mp4 --model medium --provider openai
     OpenAI Whisper：语音识别核心
     Ollama：本地化大模型部署
     FFmpeg：音视频处理
+
