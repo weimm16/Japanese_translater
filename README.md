@@ -103,22 +103,25 @@ Linux (Ubuntu)
 1. FFmpeg 未找到
 
     检查环境变量是否配置正确，重启终端后验证 ffmpeg -version
-    Windows 下确保路径无中文 / 空格
 
-2. Whisper 转录慢
+   Windows 下确保路径无中文 / 空格
+
+3. Whisper 转录慢
 
     换更小的模型（如 base），或安装 GPU 版 PyTorch 启用 GPU 加速
-    检查内存是否充足，推荐 16GB 以上
 
-3. 字幕缺失
+   检查内存是否充足，推荐 16GB 以上
+
+4. 字幕缺失
 
     检查音频是否提取完整，或调整 Whisper 提示词 / 参数
-    确保字幕文件编码为 UTF-8
 
-4. Git 推送失败（连接超时）
+   确保字幕文件编码为 UTF-8
+
+5. Git 推送失败（连接超时）
 
     切换为 SSH 协议：git remote set-url origin git@github.com:weimm16/Japanese_translater.git
-    配置代理：git config --global https.proxy http://127.0.0.1:7890
+
 
 🤝 贡献指南
 
@@ -132,3 +135,4 @@ Linux (Ubuntu)
 本项目基于 MIT 许可证开源，详见 LICENSE 文件。
 📞 联系方式
 如有问题或建议，欢迎提交 Issue 或联系开发者。
+
