@@ -48,3 +48,4 @@ tqdm
 python-dotenv
 pydantic
 typing-extensions
+tqdm

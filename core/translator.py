@@ -127,10 +127,10 @@ class LLMTranslator:
         
         try:
             payload = {
-                "model": getattr(config, "LOCAL_MODEL", "qwen2.5:14b"),
+                "model": getattr(config, "LOCAL_MODEL", "gemma3:27b"),
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.1,
-                "max_tokens": 500
+                "max_tokens": 1000
             }
             response = self.session.post(
                 f"{self.base_url}/chat/completions",

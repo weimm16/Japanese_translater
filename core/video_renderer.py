@@ -1,8 +1,10 @@
-# core/video_renderer.py
 import ffmpeg
 import subprocess
 import shutil
 import codecs
+import tempfile
+import re
+import os
 from pathlib import Path
 from typing import Optional, Tuple
 from utils.logger import setup_logger
@@ -23,11 +25,118 @@ class VideoRenderer:
         if self.font_path and not Path(self.font_path).exists():
             logger.warning(f"指定的字体文件不存在：{self.font_path}，可能导致字幕显示异常")
 
+    def _process_subtitle_line_break(self, subtitle_path: Path, max_chars: int = 25) -> Path:
+        """
+        处理字幕文件的长行自动换行（核心新增方法）
+        :param subtitle_path: 原字幕文件路径
+        :param max_chars: 每行最大汉字数，默认25
+        :return: 处理后的临时字幕文件路径
+        """
+        if subtitle_path.suffix.lower() not in ['.srt', '.ass']:
+            logger.warning(f"不支持的字幕格式 {subtitle_path.suffix}，跳过自动换行处理")
+            return subtitle_path
+
+        # 创建临时文件（后缀与原文件一致，避免FFmpeg解析异常）
+        temp_fd, temp_path = tempfile.mkstemp(
+            suffix=subtitle_path.suffix,
+            prefix="subtitle_processed_",
+            dir=subtitle_path.parent
+        )
+        temp_path = Path(temp_path)
+        logger.info(f"处理字幕自动换行，生成临时文件：{temp_path}")
+
+        try:
+            content = subtitle_path.read_text(encoding='utf-8')
+            processed_content = ""
+
+            if subtitle_path.suffix.lower() == '.srt':
+                # SRT格式解析：数字\n时间轴\n字幕内容\n\n
+                srt_pattern = re.compile(r'(\d+)\r?\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\r?\n([\s\S]*?)(?=\r?\n\r?\n|$)')
+                matches = srt_pattern.findall(content)
+
+                for idx, start_time, end_time, text in matches:
+                    clean_text = text.strip()
+                    if not clean_text:
+                        processed_content += f"{idx}\n{start_time} --> {end_time}\n{text}\n\n"
+                        continue
+
+                    # 拆分长行：超过25字自动换行
+                    lines = []
+                    current_line = ""
+                    char_count = 0
+
+                    for char in clean_text:
+                        char_count += 1  # 所有字符统一计数（可根据需求调整：中文字符+1，英文+0.5）
+                        current_line += char
+
+                        if char_count >= max_chars:
+                            lines.append(current_line)
+                            current_line = ""
+                            char_count = 0
+
+                    if current_line:
+                        lines.append(current_line)
+
+                    processed_text = "\n".join(lines)
+                    processed_content += f"{idx}\n{start_time} --> {end_time}\n{processed_text}\n\n"
+
+            elif subtitle_path.suffix.lower() == '.ass':
+                # ASS格式解析：重点处理Dialogue行的文本
+                ass_lines = content.splitlines()
+                for line in ass_lines:
+                    if line.startswith('Dialogue:'):
+                        # ASS Dialogue格式：Dialogue: Marked,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+                        parts = line.split(',', 9)  # 前9个字段分割，最后一个是字幕文本
+                        if len(parts) < 10:
+                            processed_content += line + "\n"
+                            continue
+
+                        dialogue_prefix = ','.join(parts[:9])
+                        text = parts[9].strip().replace('\\N', '')  # 移除原有换行
+
+                        if not text:
+                            processed_content += line + "\n"
+                            continue
+
+                        # 拆分长行（ASS用\N表示换行）
+                        lines = []
+                        current_line = ""
+                        char_count = 0
+
+                        for char in text:
+                            char_count += 1
+                            current_line += char
+
+                            if char_count >= max_chars:
+                                lines.append(current_line)
+                                current_line = ""
+                                char_count = 0
+
+                        if current_line:
+                            lines.append(current_line)
+
+                        processed_text = "\\N".join(lines)
+                        processed_content += f"{dialogue_prefix},{processed_text}\n"
+                    else:
+                        # 非Dialogue行直接保留（样式/脚本等）
+                        processed_content += line + "\n"
+
+            # 写入处理后的临时文件
+            temp_path.write_text(processed_content, encoding='utf-8')
+            return temp_path
+
+        except Exception as e:
+            logger.error(f"处理字幕自动换行失败：{e}", exc_info=True)
+            temp_path.unlink(missing_ok=True)  # 失败则删除临时文件
+            return subtitle_path
+        finally:
+            os.close(temp_fd)  # 关闭临时文件描述符
+
     def burn_subtitles(self, video_path: str, subtitle_path: str,
                        output_path: str,
                        style: Optional[dict] = None) -> str:
         """
-        将字幕烧录到视频中（修复音频丢失+字幕缺失问题）
+        将字幕烧录到视频中（修复音频丢失+字幕缺失问题 + 新增25字自动换行）
         """
         # === 核心修复1：严格校验输入文件 ===
         video_path = Path(video_path)
@@ -63,6 +172,10 @@ class VideoRenderer:
         # 修复：过滤空值/非法键，避免style_str拼接错误
         style_str = ','.join([f"{k}={v}" for k, v in style.items() if v and isinstance(v, (str, int))])
 
+        # 临时文件标记（用于后续清理）
+        processed_subtitle_path = None
+        need_clean_temp = False
+
         try:
             # 1. 获取原始视频信息（修复异常处理）
             probe = ffmpeg.probe(str(video_path))
@@ -76,21 +189,25 @@ class VideoRenderer:
             # === 核心修复2：校验字幕时间轴（避免超出视频时长的字幕被忽略） ===
             self._check_subtitle_timeline(subtitle_path, video_duration)
 
-            # 2. 构建FFmpeg命令（修复字幕滤镜参数）
+            # === 核心新增：处理字幕长行自动换行（超过25字） ===
+            processed_subtitle_path = self._process_subtitle_line_break(subtitle_path, max_chars=25)
+            need_clean_temp = processed_subtitle_path != subtitle_path
+
+            # 2. 构建FFmpeg命令（使用处理后的临时字幕文件）
             input_stream = ffmpeg.input(str(video_path))
-            subtitle_input = ffmpeg.input(str(subtitle_path))  # 独立加载字幕流，提升兼容性
+            subtitle_input = ffmpeg.input(str(processed_subtitle_path))  # 加载处理后的字幕
 
             # 应用字幕滤镜
-            if subtitle_path.suffix.lower() == '.ass':
+            if processed_subtitle_path.suffix.lower() == '.ass':
                 # ASS字幕：指定字体路径，修复字体缺失导致的字幕不显示
-                ass_filter_kwargs = {'filename': str(subtitle_path)}
+                ass_filter_kwargs = {'filename': str(processed_subtitle_path)}
                 if self.font_path:
                     ass_filter_kwargs['fontsdir'] = str(Path(self.font_path).parent)  # 字体目录
                 video = ffmpeg.filter(input_stream['v'], 'ass', **ass_filter_kwargs)
             else:
                 # SRT字幕：修复force_style传递方式，增加编码指定
                 sub_filter_kwargs = {
-                    'filename': str(subtitle_path),
+                    'filename': str(processed_subtitle_path),
                     'force_style': style_str,
                     'charenc': 'utf-8'  # 强制指定字幕编码，避免乱码/解析失败
                 }
@@ -139,6 +256,14 @@ class VideoRenderer:
         except Exception as e:
             logger.error(f"Rendering error: {e}", exc_info=True)  # 打印完整堆栈，便于调试
             raise
+        finally:
+            # === 清理临时字幕文件 ===
+            if need_clean_temp and processed_subtitle_path and processed_subtitle_path.exists():
+                try:
+                    processed_subtitle_path.unlink()
+                    logger.info(f"清理临时字幕文件：{processed_subtitle_path}")
+                except Exception as e:
+                    logger.warning(f"清理临时字幕文件失败：{e}")
 
     def extract_frame(self, video_path: str, time: float, output_path: str):
         """提取预览帧（修复quiet=True导致的调试缺失）"""
@@ -234,6 +359,7 @@ class VideoRenderer:
             # ASS字幕可按需扩展解析逻辑
         except Exception as e:
             logger.warning(f"校验字幕时间轴失败（不影响执行）：{e}")
+
 
 
 

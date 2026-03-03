@@ -28,7 +28,7 @@ class Config:
     # Ollama配置（核心：HTTP协议，无SSL）
     LOCAL_API_KEY = os.getenv("LOCAL_API_KEY", "ollama-no-key")  # 任意值即可
     LOCAL_API_BASE = os.getenv("LOCAL_API_BASE", "http://localhost:11434/v1")  # 必须是HTTP
-    LOCAL_MODEL = os.getenv("LOCAL_MODEL", "qwen2.5:14b")
+    LOCAL_MODEL = os.getenv("LOCAL_MODEL", "gemma3:27b")
     
     # 翻译提供商
     TRANSLATION_PROVIDER = os.getenv("TRANSLATION_PROVIDER", "local")
