@@ -49,5 +49,58 @@ source venv/bin/activate
 
 # 安装依赖（包含python-dotenv，确保.env加载）
 pip install -r requirements.txt
+```
+### 2. 安装 Ollama（本地化翻译必备）
+
+    从Ollama 官网下载并安装对应系统版本
+    拉取 Qwen2.5 模型（推荐 14B 量化版）：
+
+```bash
 
 
+ollama pull qwen2.5:14b-int4
+```
+### 📖 使用指南
+方式 1：图形界面（GUI，推荐新手）
+```bash
+
+# 激活虚拟环境后执行
+python gui.py
+```
+```bash
+GUI 操作流程
+
+    选择源视频：点击「浏览」选择需要翻译的日语视频文件
+    配置参数：
+        Whisper 模型：读取.env 的WHISPER_MODEL，可在 GUI 中覆盖
+        翻译 API：读取.env 的TRANSLATION_PROVIDER，可在 GUI 中切换
+        可选：勾选「仅生成字幕文件」（不烧录到视频）
+    选择输出路径：指定翻译后视频 / 字幕的保存位置（默认读取.env 的OUTPUT_DIR）
+    开始翻译：点击「开始翻译」，等待处理完成
+    查看结果：处理完成后可点击「打开保存目录」查看生成的字幕 / 视频
+```
+## 方式 2：命令行（CLI，适合开发者 / 批量处理）
+```bash
+
+# 基础用法（优先读取.env配置，参数可覆盖.env）
+python main.py --video path/to/your/video.mp4 --output path/to/output.mp4
+
+# 仅生成字幕（不烧录视频）
+python main.py --video path/to/video.mp4 --skip-burn --output path/to/subtitle.srt
+
+# 覆盖.env的Whisper模型和翻译引擎
+python main.py --video path/to/video.mp4 --model medium --provider openai
+```
+贡献指南
+
+    Fork 本仓库
+    创建特性分支：git checkout -b feature/your-feature
+    提交修改：git commit -m 'Add some feature'
+    推送分支：git push origin feature/your-feature
+    提交 Pull Request
+
+🙏 致谢
+
+    OpenAI Whisper：语音识别核心
+    Ollama：本地化大模型部署
+    FFmpeg：音视频处理
