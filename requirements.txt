@@ -1,0 +1,50 @@
+# ============================================
+# Mac 专用依赖清单（无版本号）
+# 支持 Apple Silicon (M1/M2/M3) 和 Intel
+# ============================================
+
+# ---------- 核心依赖 ----------
+# 视频处理
+moviepy
+imageio
+imageio-ffmpeg
+ffmpeg-python
+
+# 音频处理
+pydub
+soundfile
+librosa
+
+# ---------- AI/ML 模型 ----------
+# OpenAI Whisper（语音识别）
+openai-whisper
+
+# PyTorch（Mac 使用默认版本，支持 MPS 加速）
+torch
+torchaudio
+
+# ---------- 大语言模型 API ----------
+# OpenAI API
+openai
+
+# Anthropic Claude API
+anthropic
+
+# HTTP 客户端
+httpx
+aiohttp
+
+# ---------- 字幕处理 ----------
+srt
+pysrt
+ass
+
+# ---------- 图像/文本处理 ----------
+Pillow
+numpy
+
+# ---------- 工具库 ----------
+tqdm
+python-dotenv
+pydantic
+typing-extensions
