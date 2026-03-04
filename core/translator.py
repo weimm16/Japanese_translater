@@ -99,7 +99,7 @@ class LLMTranslator:
         """批量翻译（减小批次，适配gemma3:27b）"""
         translated_segments = []
         total = len(segments)
-        logger.info(f"批量翻译（Ollama gemma3:27b），共{total}条，批次{batch_size}")
+        logger.info(f"批量翻译，共{total}条，批次{batch_size}")
 
         for i in range(0, total, batch_size):
             batch = segments[i:i+batch_size]
