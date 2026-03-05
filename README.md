@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen)](requirements.txt)
 
-一款本地化部署的日语视频翻译工具，支持音频提取、语音识别、智能翻译、字幕生成与视频烧录全流程，无需依赖第三方付费API（可本地化部署Qwen2.5模型）。
+一款本地化部署的日语视频翻译工具，支持音频提取、语音识别、智能翻译、字幕生成与视频烧录全流程，无需依赖第三方付费API（可本地化部署）。
 
 ## 🌟 核心功能
 - 🎵 **音频提取**：自动从视频中提取音频（支持MP4/MKV/AVI/MOV等格式）

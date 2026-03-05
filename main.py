@@ -33,6 +33,7 @@ class VideoTranslator:
                       output_name: Optional[str] = None,
                       skip_translate: bool = False,
                       burn_subtitles: bool = True,
+                      source_language: str = "ja",
                       progress_callback: Callable[[int, int], None] = None) -> dict:
         """
         处理视频的主流程
@@ -68,13 +69,13 @@ class VideoTranslator:
             current_step += 1
 
             # 2. 语音识别 + 进度回调
-            logger.info("Step 2: Speech recognition...")
+            logger.info(f"Step 2: Speech recognition ({source_language})...")
             if progress_callback:
                 progress_callback(current_step, TOTAL_STEPS)
             if self.speech_recognizer is None:
                 self.speech_recognizer = SpeechRecognizer()
 
-            segments = self.speech_recognizer.transcribe(str(audio_path), language="ja")
+            segments = self.speech_recognizer.transcribe(str(audio_path), language=source_language)
 
             # 保存原始转录（绝对路径）
             transcript_path = self.file_manager.get_temp_path("original.srt")
@@ -89,7 +90,7 @@ class VideoTranslator:
                     progress_callback(current_step, TOTAL_STEPS)
                 # 转换为字典列表
                 seg_dicts = [{"start": s.start, "end": s.end, "text": s.text} for s in segments]
-                translations = await self.translator.translate_batch(seg_dicts)
+                translations = await self.translator.translate_batch(seg_dicts, source_language=source_language)
 
                 # 生成翻译字幕（绝对路径，自定义输出名）
                 srt_name = f"{output_name.stem}_cn.srt"
@@ -137,19 +138,21 @@ class VideoTranslator:
         logger.info("临时文件已清理")
 
 async def main():
-    parser = argparse.ArgumentParser(description='日语视频翻译工具')
+    parser = argparse.ArgumentParser(description='多语言视频翻译工具')
     parser.add_argument('video', help='输入视频文件路径')
     parser.add_argument('-o', '--output', help='输出文件名/绝对路径', default=None)
-    parser.add_argument('--skip-translate', action='store_true', help='跳过翻译，仅生成日文字幕')
+    parser.add_argument('--skip-translate', action='store_true', help='跳过翻译，仅生成原始字幕')
     parser.add_argument('--no-burn', action='store_true', help='不烧录字幕，仅生成字幕文件')
     parser.add_argument('--model', help='Whisper模型大小', default='large-v3')
     parser.add_argument('--device', help='运行设备', default='cuda')
+    parser.add_argument('--language', help='源语言代码 (ja, en, ko, es, fr, de, it, pt, ru, ar, hi, th, vi)', default='ja')
 
     args = parser.parse_args()
 
     # 更新配置
     config.WHISPER_MODEL = args.model
     config.WHISPER_DEVICE = args.device
+    config.WHISPER_LANGUAGE = args.language
 
     translator = VideoTranslator()
 
@@ -158,7 +161,8 @@ async def main():
             args.video,
             output_name=args.output,
             skip_translate=args.skip_translate,
-            burn_subtitles=not args.no_burn
+            burn_subtitles=not args.no_burn,
+            source_language=args.language
         )
 
         print("\n" + "="*50)
@@ -188,6 +192,3 @@ if __name__ == "__main__":
             loop.run_until_complete(main())
         else:
             raise
-
-
-

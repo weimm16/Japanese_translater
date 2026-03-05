@@ -51,9 +51,9 @@ class LLMTranslator:
         }
         logger.info("Ollama客户端初始化完成（无SSL冲突，纯HTTP）")
 
-    async def translate_single(self, segment: Dict) -> Dict:
+    async def translate_single(self, segment: Dict, source_language: str = "ja") -> Dict:
         """翻译单条字幕（仅Ollama，无SSL调用）"""
-        prompt = self._build_prompt(segment["text"])
+        prompt = self._build_prompt(segment["text"], source_language)
         
         try:
             # Ollama OpenAI兼容API请求（纯HTTP，无SSL验证）
@@ -95,7 +95,7 @@ class LLMTranslator:
                 "translation": segment["text"]
             }
 
-    async def translate_batch(self, segments: List[Dict], batch_size: int = 3) -> List[Dict]:
+    async def translate_batch(self, segments: List[Dict], batch_size: int = 3, source_language: str = "ja") -> List[Dict]:
         """批量翻译（减小批次，适配gemma3:27b）"""
         translated_segments = []
         total = len(segments)
@@ -105,7 +105,7 @@ class LLMTranslator:
             batch = segments[i:i+batch_size]
             logger.info(f"处理批次 {i//batch_size + 1}/{(total + batch_size -1)//batch_size}")
             
-            tasks = [self.translate_single(seg) for seg in batch]
+            tasks = [self.translate_single(seg, source_language) for seg in batch]
             batch_results = await asyncio.gather(*tasks)
             translated_segments.extend(batch_results)
             
@@ -115,15 +115,47 @@ class LLMTranslator:
         logger.info(f"批量翻译完成：{len(translated_segments)}条")
         return translated_segments
 
-    def _build_prompt(self, text: str) -> str:
-        """精简提示词，提升gemma3:27b响应速度"""
-        prompt = f"""请将以下日语文本翻译成简体中文，要求准确、自然、口语化，仅返回译文：
+    def _build_prompt(self, text: str, source_language: str = "ja") -> str:
+        """根据源语言构建优化的翻译提示词"""
+        # 语言名称映射
+        language_names = {
+            "ja": "日语",
+            "en": "英语",
+            "ko": "韩语",
+            "es": "西班牙语",
+            "fr": "法语",
+            "de": "德语",
+            "it": "意大利语",
+            "pt": "葡萄牙语",
+            "ru": "俄语",
+            "ar": "阿拉伯语",
+            "hi": "印地语",
+            "th": "泰语",
+            "vi": "越南语"
+        }
+        
+        lang_name = language_names.get(source_language, source_language)
+        
+        # 根据不同语言优化提示词
+        if source_language == "ja":
+            prompt = f"""请将以下日语文本翻译成简体中文，要求准确、自然、口语化，仅返回译文：
 {text}"""
+        elif source_language == "en":
+            prompt = f"""请将以下英语文本翻译成简体中文，要求准确、自然、符合中文表达习惯，仅返回译文：
+{text}"""
+        elif source_language == "ko":
+            prompt = f"""请将以下韩语文本翻译成简体中文，要求准确、自然、口语化，仅返回译文：
+{text}"""
+        else:
+            # 通用提示词
+            prompt = f"""请将以下{lang_name}文本翻译成简体中文，要求准确、自然、符合中文表达习惯，仅返回译文：
+{text}"""
+        
         return prompt.strip()
 
-    def translate_sync(self, text: str) -> str:
+    def translate_sync(self, text: str, source_language: str = "ja") -> str:
         """同步翻译（备用接口）"""
-        prompt = self._build_prompt(text)
+        prompt = self._build_prompt(text, source_language)
         
         try:
             payload = {
@@ -154,11 +186,6 @@ if __name__ == "__main__":
     # 实例化并测试
     translator = LLMTranslator()
     test_seg = {"start": 0.0, "end": 5.0, "text": "こんにちは、世界！今日は天気がいいですね。"}
-    res = asyncio.run(translator.translate_single(test_seg))
+    res = asyncio.run(translator.translate_single(test_seg, source_language="ja"))
     print(f"原文: {res['text']}")
     print(f"译文: {res['translation']}")
-
-
-
-
-

@@ -22,7 +22,7 @@ def save_gui_config(config: dict):
 def load_gui_config(default: dict = None) -> dict:
     """加载GUI配置，无配置时返回默认值"""
     if default is None:
-        default = {"model": "large-v3", "api": "openai", "burn_subtitles": True}
+        default = {"model": "large-v3", "api": "openai", "language": "ja - 日语", "burn_subtitles": True}
     try:
         if CONFIG_FILE.exists():
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -35,5 +35,3 @@ def load_gui_config(default: dict = None) -> dict:
     except Exception as e:
         logger.warning(f"加载配置失败，使用默认值: {e}")
     return default
-
-

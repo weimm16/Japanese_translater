@@ -32,6 +32,8 @@ class TranslatorGUI:
         self.model_var = tk.StringVar(value=self.gui_config["model"])
         # API选择（加载配置）
         self.api_var = tk.StringVar(value=self.gui_config["api"])
+        # 语言选择（加载配置）
+        self.language_var = tk.StringVar(value=self.gui_config.get("language", "ja - 日语"))
         # 是否烧录字幕（新增，加载配置）
         self.burn_var = tk.BooleanVar(value=self.gui_config["burn_subtitles"])
         # 视频路径/输出路径
@@ -57,6 +59,7 @@ class TranslatorGUI:
         self.options_frame = tk.LabelFrame(self.root, text="配置", padx=10, pady=10)
         self.options_frame.pack(fill=tk.X, padx=20, pady=10)
 
+        # 第一行配置
         # 模型选择
         tk.Label(self.options_frame, text="Whisper模型:").grid(row=0, column=0, sticky=tk.W, pady=5)
         model_combo = ttk.Combobox(self.options_frame, textvariable=self.model_var,
@@ -70,8 +73,16 @@ class TranslatorGUI:
         api_combo.grid(row=0, column=3, sticky=tk.W, padx=10)
 
         # 仅生成字幕（不烧录）复选框（新增）
-        tk.Checkbutton(self.options_frame, text="仅生成字幕文件（不烧录到视频）",
+        tk.Checkbutton(self.options_frame, text="生成烧录后的视频",
                        variable=self.burn_var, command=self.on_burn_checked).grid(row=0, column=4, sticky=tk.W, padx=10)
+        
+        # 第二行配置
+        # 语言选择
+        tk.Label(self.options_frame, text="源语言:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        language_values = [f"{code} - {name}" for code, name in config.SUPPORTED_LANGUAGES.items()]
+        language_combo = ttk.Combobox(self.options_frame, textvariable=self.language_var,
+                                      values=language_values, state="readonly")
+        language_combo.grid(row=1, column=1, sticky=tk.W, padx=10)
 
         # ========== 4. 进度条 + 状态 ==========
         self.progress = ttk.Progressbar(self.root, length=600, mode='determinate')
@@ -156,10 +167,15 @@ class TranslatorGUI:
         # 2. 更新全局配置
         config.WHISPER_MODEL = self.model_var.get()
         config.TRANSLATION_PROVIDER = self.api_var.get()
+        # 提取语言代码（从"ja - 日语"格式中提取"ja"）
+        language_full = self.language_var.get()
+        language_code = language_full.split(" - ")[0] if " - " in language_full else language_full
+        config.WHISPER_LANGUAGE = language_code
         # 3. 保存GUI配置（持久化）
         save_gui_config({
             "model": self.model_var.get(),
             "api": self.api_var.get(),
+            "language": language_full,
             "burn_subtitles": self.burn_var.get()
         })
         # 4. 禁用按钮+更新状态
@@ -199,11 +215,16 @@ class TranslatorGUI:
         """处理视频核心逻辑"""
         try:
             self.translator = VideoTranslator()
-            # 调用process，传入进度回调+自定义输出路径+是否烧录
+            # 提取语言代码
+            language_full = self.language_var.get()
+            language_code = language_full.split(" - ")[0] if " - " in language_full else language_full
+            
+            # 调用process，传入进度回调+自定义输出路径+是否烧录+源语言
             results = await self.translator.process(
                 video_path,
                 output_name=output_path,
                 burn_subtitles=self.burn_var.get(),
+                source_language=language_code,
                 progress_callback=self.update_progress
             )
             # 处理完成（UI更新）- 优化results作用域
@@ -247,5 +268,3 @@ class TranslatorGUI:
 if __name__ == "__main__":
     app = TranslatorGUI()
     app.run()
-
-

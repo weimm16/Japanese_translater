@@ -17,6 +17,23 @@ class Config:
     WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
     WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "ja")
     
+    # 支持的语言列表
+    SUPPORTED_LANGUAGES = {
+        "ja": "日语",
+        "en": "英语",
+        "ko": "韩语",
+        "es": "西班牙语",
+        "fr": "法语",
+        "de": "德语",
+        "it": "意大利语",
+        "pt": "葡萄牙语",
+        "ru": "俄语",
+        "ar": "阿拉伯语",
+        "hi": "印地语",
+        "th": "泰语",
+        "vi": "越南语"
+    }
+    
     # OpenAI/Anthropic（备用）
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
@@ -42,14 +59,3 @@ class Config:
 
 config = Config()
 __all__ = ["config"]
-
-
-
-
-
-
-
-
-
-
-
