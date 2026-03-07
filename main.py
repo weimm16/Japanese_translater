@@ -72,8 +72,8 @@ class VideoTranslator:
             logger.info(f"Step 2: Speech recognition ({source_language})...")
             if progress_callback:
                 progress_callback(current_step, TOTAL_STEPS)
-            if self.speech_recognizer is None:
-                self.speech_recognizer = SpeechRecognizer()
+            # 每次都重新创建SpeechRecognizer，以确保使用最新的模型配置
+            self.speech_recognizer = SpeechRecognizer(progress_callback=progress_callback)
 
             segments = self.speech_recognizer.transcribe(str(audio_path), language=source_language)
 

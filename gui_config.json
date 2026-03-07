@@ -1,5 +1,5 @@
 {
-    "model": "small",
+    "model": "kotoba-whisper",
     "api": "local",
     "language": "ja - 日语",
     "burn_subtitles": true

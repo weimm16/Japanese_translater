@@ -63,7 +63,7 @@ class TranslatorGUI:
         # 模型选择
         tk.Label(self.options_frame, text="Whisper模型:").grid(row=0, column=0, sticky=tk.W, pady=5)
         model_combo = ttk.Combobox(self.options_frame, textvariable=self.model_var,
-                                   values=["tiny", "base", "small", "medium", "large-v3"], state="readonly")
+                                   values=["tiny", "base", "small", "medium", "large-v3", "kotoba-whisper"], state="readonly")
         model_combo.grid(row=0, column=1, sticky=tk.W, padx=10)
 
         # API选择
@@ -205,9 +205,16 @@ class TranslatorGUI:
             3: "翻译文本",
             4: "烧录字幕"
         }
+        
+        # 处理模型下载的进度更新
+        if step < 2 and progress_val < 10:
+            status_text = "处理中...【下载模型】"
+        else:
+            status_text = f"处理中...【{step_desc.get(step, '完成')}】"
+            
         self.root.after(0, lambda: self.progress.config(value=progress_val))
         self.root.after(0, lambda: self.status_label.config(
-            text=f"处理中...【{step_desc.get(step, '完成')}】",
+            text=status_text,
             fg="#4CAF50"
         ))
 
