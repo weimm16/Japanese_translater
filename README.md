@@ -4,12 +4,12 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen)](requirements.txt)
 
-一款本地化部署的日语视频翻译工具，支持音频提取、语音识别、智能翻译、字幕生成与视频烧录全流程，无需依赖第三方付费API（可本地化部署）。
+一款本地化部署的日全语视频翻译工具，支持音频提取、语音识别、智能翻译、字幕生成与视频烧录全流程，无需依赖第三方付费API（可本地化部署）。
 
 ## 🌟 核心功能
 - 🎵 **音频提取**：自动从视频中提取音频（支持MP4/MKV/AVI/MOV等格式）
-- 🗣️ **语音识别**：基于OpenAI Whisper识别日语语音，生成精准时间戳字幕
-- 📝 **智能翻译**：支持Qwen2.5（本地）/OpenAI/Anthropic多引擎翻译日语到中文
+- 🗣️ **语音识别**：基于OpenAI Whisper识别语音，生成精准时间戳字幕
+- 📝 **智能翻译**：支持ollama（本地）/OpenAI/Anthropic多引擎翻译日语到中文
 - 🎬 **字幕生成**：生成标准SRT/ASS字幕文件，支持自定义字体/样式
 - 🎥 **字幕烧录**：将翻译后的字幕无缝烧录到视频中，输出完整翻译视频
 
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 ```bash
 
 
-ollama pull gemma3:27b
+ollama pull gemma3:27b#选择想用的模型
 #运行ollama
 ollama serve
 
@@ -71,18 +71,10 @@ ollama serve
  # Ollama配置（核心：HTTP协议，无SSL）
     LOCAL_API_KEY = os.getenv("LOCAL_API_KEY", "ollama-no-key")  # 任意值即可
     LOCAL_API_BASE = os.getenv("LOCAL_API_BASE", "http://localhost:11434/v1")  # 必须是HTTP
-    LOCAL_MODEL = os.getenv("LOCAL_MODEL", "gemma3:27b")
+    LOCAL_MODEL = os.getenv("LOCAL_MODEL", "gemma3:27b")#修改这里
     
 ```
-# core/translator.py
-```bash
-payload = {
-                "model": getattr(config, "LOCAL_MODEL", "gemma3:27b"),
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.1,
-                "max_tokens": 500
-            }
-```
+
 方式 1：图形界面（GUI，推荐新手）
 ```bash
 
@@ -94,24 +86,13 @@ GUI 操作流程
 
     选择源视频：点击「浏览」选择需要翻译的日语视频文件
     配置参数：
-        Whisper 模型：读取.env 的WHISPER_MODEL，可在 GUI 中覆盖
-        翻译 API：读取.env 的TRANSLATION_PROVIDER，可在 GUI 中切换
+        Whisper 模型：读取.env 的WHISPER_MODEL，可在 GUI 中覆盖，日语推荐使用kotoba-whisper
+        翻译 API：读取可在 GUI 中切换（本地Qwen2.5 / OpenAI / Anthropic）
         可选：勾选「仅生成字幕文件」（不烧录到视频）
     选择输出路径：指定翻译后视频 / 字幕的保存位置（默认读取.env 的OUTPUT_DIR）
     开始翻译：点击「开始翻译」，等待处理完成
     查看结果：处理完成后可点击「打开保存目录」查看生成的字幕 / 视频
-```
-## 方式 2：命令行（CLI，适合开发者 / 批量处理）
-```bash
 
-# 基础用法（优先读取.env配置，参数可覆盖.env）
-python main.py --video path/to/your/video.mp4 --output path/to/output.mp4
-
-# 仅生成字幕（不烧录视频）
-python main.py --video path/to/video.mp4 --skip-burn --output path/to/subtitle.srt
-
-# 覆盖.env的Whisper模型和翻译引擎
-python main.py --video path/to/video.mp4 --model medium --provider openai
 ```
 贡献指南
 
