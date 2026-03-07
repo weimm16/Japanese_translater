@@ -68,7 +68,7 @@ class SpeechRecognizer:
                 
                 # 加载模型（首次使用时下载）
                 if self.model is None or self.processor is None:
-                    logger.info("Downloading and loading kotoba-whisper model...")
+                    logger.info("Loading kotoba-whisper model...")
                     
                     # 定义进度回调函数
                     def download_progress_callback(step, total, status):
@@ -78,13 +78,33 @@ class SpeechRecognizer:
                             progress = (step / total) * 10
                             self.progress_callback(1, 100)  # 发送进度更新
                     
-                    # 下载并加载模型
-                    self.processor = WhisperProcessor.from_pretrained("kotaemon/kotoba-whisper", progress_callback=download_progress_callback)
-                    self.model = WhisperForConditionalGeneration.from_pretrained("kotaemon/kotoba-whisper", progress_callback=download_progress_callback).to(self.device)
-                    logger.info("kotoba-whisper model loaded")
-                    # 模型下载完成，更新进度
-                    if self.progress_callback:
-                        self.progress_callback(10, 100)
+                    try:
+                        # 尝试加载kotoba-whisper模型
+                        model_names = ["kotoba-tech/kotoba-whisper-v1.0"]
+                        model_loaded = False
+                        
+                        for model_name in model_names:
+                            try:
+                                logger.info(f"Trying to load model: {model_name}")
+                                # 下载并加载模型
+                                self.processor = WhisperProcessor.from_pretrained(model_name, progress_callback=download_progress_callback)
+                                self.model = WhisperForConditionalGeneration.from_pretrained(model_name, progress_callback=download_progress_callback).to(self.device)
+                                logger.info(f"{model_name} model loaded successfully")
+                                # 模型下载完成，更新进度
+                                if self.progress_callback:
+                                    self.progress_callback(10, 100)
+                                model_loaded = True
+                                break
+                            except Exception as e:
+                                logger.warning(f"Failed to load {model_name}: {e}")
+                                continue
+                        
+                        if not model_loaded:
+                            raise Exception("所有kotoba-whisper模型变体都无法加载")
+                    except Exception as e:
+                        logger.error(f"Error loading kotoba-whisper model: {e}")
+                        # 直接抛出异常，不进行回退
+                        raise Exception(f"无法加载kotoba-whisper模型: {e}")
                 
                 # 读取音频
                 audio, sr = sf.read(audio_path)
@@ -119,11 +139,8 @@ class SpeechRecognizer:
                 logger.info(f"Created {len(segments)} segments")
             except Exception as e:
                 logger.error(f"Error with kotoba-whisper: {e}")
-                # 出错时使用原始whisper模型作为备份
-                logger.info("Falling back to original whisper model")
-                self.is_kotoba = False
-                self.model = whisper.load_model("large-v3").to(self.device)
-                return self.transcribe(audio_path, language)
+                # 直接抛出异常，不进行回退
+                raise Exception(f"kotoba-whisper处理失败: {e}")
         else:
             # 使用原始whisper模型
             result = self.model.transcribe(
