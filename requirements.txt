@@ -15,9 +15,11 @@ pydub
 soundfile
 librosa
 
-# ---------- AI/ML 模型 ----------
+# # AI/ML 模型 ----------
 # OpenAI Whisper（语音识别）
 openai-whisper
+# Hugging Face Transformers（用于kotoba-whisper模型）
+transformers
 
 # PyTorch（Mac 使用默认版本，支持 MPS 加速）
 torch
